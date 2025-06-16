@@ -8,20 +8,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import net.harutiro.azimuthtest.ui.theme.AzimuthTestTheme
 
-
 class MainActivity : ComponentActivity(), SensorEventListener {
-
 
     val TAG: String = "SensorTest2"
     val RAD2DEG: Double = 180 / Math.PI
@@ -33,10 +37,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     var geomagnetic: FloatArray = FloatArray(3)
     var attitude: FloatArray = FloatArray(3)
 
-    var azimuthText = mutableStateOf("")
-    var pitchText = mutableStateOf("")
-    var rollText = mutableStateOf("")
+    var baseAzimuth: Float = 0f
 
+    var azimuthText = mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,35 +49,36 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
         setContent {
             AzimuthTestTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                ) { innerPadding ->
                     Column(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+
                     ) {
                         Text(
                             text = "Azimuth",
-                            modifier = Modifier.padding(innerPadding)
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
                         )
                         Text(
                             text = azimuthText.value,
-                            modifier = Modifier.padding(innerPadding)
+                            fontSize = 100.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
                         )
 
-                        Text(
-                            text = "Pitch",
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                        Text(
-                            text = pitchText.value,
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                        Text(
-                            text = "Roll",
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                        Text(
-                            text = rollText.value,
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                        Button(
+                            onClick = { resetBaseValues() },
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text("リセット")
+                        }
                     }
                 }
             }
@@ -106,6 +110,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
+    private fun resetBaseValues() {
+        baseAzimuth = attitude[0]
+    }
+
     override fun onSensorChanged(event: SensorEvent) {
         when (event.sensor.getType()) {
             Sensor.TYPE_MAGNETIC_FIELD -> geomagnetic = event.values.clone()
@@ -123,13 +131,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 attitude
             )
 
-            azimuthText.value = (attitude[0] * RAD2DEG ).toString()
-            pitchText.value = (attitude[1] * RAD2DEG).toString()
-            rollText.value = (attitude[2] * RAD2DEG).toString()
+            val relativeAzimuth = attitude[0] - baseAzimuth
+            azimuthText.value = String.format("%.1f", relativeAzimuth * RAD2DEG)
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
