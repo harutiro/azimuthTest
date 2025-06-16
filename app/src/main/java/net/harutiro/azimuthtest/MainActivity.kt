@@ -24,11 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import net.harutiro.azimuthtest.ui.theme.AzimuthTestTheme
+import kotlin.collections.ArrayDeque
 
 class MainActivity : ComponentActivity(), SensorEventListener {
 
     val TAG: String = "SensorTest2"
     val RAD2DEG: Double = 180 / Math.PI
+    val FILTER_SIZE = 20  // 移動平均のサンプル数
 
     var sensorManager: SensorManager? = null
 
@@ -40,6 +42,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     var baseAzimuth: Float = 0f
 
     var azimuthText = mutableStateOf("")
+
+    // 移動平均フィルター用のバッファ
+    private val azimuthBuffer = ArrayDeque<Float>(FILTER_SIZE)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,6 +117,20 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private fun resetBaseValues() {
         baseAzimuth = attitude[0]
+        // バッファをクリア
+        azimuthBuffer.clear()
+    }
+
+    private fun applyMovingAverage(newValue: Float): Float {
+        // バッファが一杯の場合は古い値を削除
+        if (azimuthBuffer.size >= FILTER_SIZE) {
+            azimuthBuffer.removeFirst()
+        }
+        // 新しい値を追加
+        azimuthBuffer.addLast(newValue)
+        
+        // 平均値を計算
+        return azimuthBuffer.average().toFloat()
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -132,7 +151,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             )
 
             val relativeAzimuth = attitude[0] - baseAzimuth
-            azimuthText.value = String.format("%.1f", relativeAzimuth * RAD2DEG)
+            // 移動平均フィルターを適用
+            val filteredAzimuth = applyMovingAverage(relativeAzimuth)
+            azimuthText.value = String.format("%.0f", filteredAzimuth * RAD2DEG)
         }
     }
 }
